@@ -5,9 +5,9 @@
 
 // #define MOONRAKER_DEBUG
 
-void lv_popup_warning(const char * warning, bool clickable);
+void lv_popup_warning(const char* warning, bool clickable);
 
-String MOONRAKER::send_request(const char * type, String path) {
+String MOONRAKER::send_request(const char* type, String path) {
     String ip = knomi_config.moonraker_ip;
     String port = knomi_config.moonraker_port;
     String url = "http://" + ip + ":" + port + path;
@@ -32,8 +32,8 @@ String MOONRAKER::send_request(const char * type, String path) {
 #ifdef MOONRAKER_DEBUG
                 Serial.println(msg.c_str());
 #endif
-                msg.remove(0, 41); //  remove header {'error': 'WebRequestError', 'message':
-                msg.remove(msg.length() - 2, 2); // remove tail }
+                msg.remove(0, 41);                //  remove header {'error': 'WebRequestError', 'message':
+                msg.remove(msg.length() - 2, 2);  // remove tail }
                 msg.replace("\\n", "\n");
                 lv_popup_warning(msg.c_str(), true);
             }
@@ -48,7 +48,7 @@ String MOONRAKER::send_request(const char * type, String path) {
             unconnected = true;
         Serial.printf("moonraker http %s error.\r\n", type);
     }
-    client.end(); //Free the resources
+    client.end();  // Free the resources
 
 #ifdef MOONRAKER_DEBUG
     Serial.printf("\r\n\r\n %s code:%d************ %s *******************\r\n\r\n", type, code, url.c_str());
@@ -76,9 +76,12 @@ bool MOONRAKER::post_to_queue(String path) {
     post_queue.count++;
 #ifdef MOONRAKER_DEBUG
     Serial.printf("\r\n\r\n ************ post queue *******************\r\n\r\n");
-    Serial.print("count: ");   Serial.println(post_queue.count);
-    Serial.print("index_w: "); Serial.println(post_queue.index_w);
-    Serial.print("queue: ");   Serial.println(path);
+    Serial.print("count: ");
+    Serial.println(post_queue.count);
+    Serial.print("index_w: ");
+    Serial.println(post_queue.index_w);
+    Serial.print("queue: ");
+    Serial.println(path);
     Serial.println("\r\n*******************************\r\n\r\n");
 #endif
     return true;
@@ -111,11 +114,11 @@ void MOONRAKER::get_printer_info(void) {
     if (!printer_info.isEmpty()) {
         DynamicJsonDocument json_parse(printer_info.length() * 2);
         deserializeJson(json_parse, printer_info);
-        data.pause = json_parse["state"]["flags"]["pausing"].as<bool>(); // pausing
-        data.pause |= json_parse["state"]["flags"]["paused"].as<bool>(); // paused
-        data.printing = json_parse["state"]["flags"]["printing"].as<bool>(); // printing
-        data.printing |= json_parse["state"]["flags"]["cancelling"].as<bool>(); // cancelling
-        data.printing |= data.pause; // pause
+        data.pause = json_parse["state"]["flags"]["pausing"].as<bool>();         // pausing
+        data.pause |= json_parse["state"]["flags"]["paused"].as<bool>();         // paused
+        data.printing = json_parse["state"]["flags"]["printing"].as<bool>();     // printing
+        data.printing |= json_parse["state"]["flags"]["cancelling"].as<bool>();  // cancelling
+        data.printing |= data.pause;                                             // pause
         data.bed_actual = int16_t(json_parse["temperature"]["bed"]["actual"].as<double>() + 0.5f);
         data.bed_target = int16_t(json_parse["temperature"]["bed"]["target"].as<double>() + 0.5f);
         data.nozzle_actual = int16_t(json_parse["temperature"][knomi_config.moonraker_tool]["actual"].as<double>() + 0.5f);
@@ -142,14 +145,13 @@ void MOONRAKER::get_printer_info(void) {
 // only return gcode file name except path
 // for example:"SD:/test/123.gcode"
 // only return "123.gcode"
-const char * path_only_gcode(const char * path)
-{
-  char * name = strrchr(path, '/');
+const char* path_only_gcode(const char* path) {
+    char* name = strrchr(path, '/');
 
-  if (name != NULL)
-    return (name + 1);
-  else
-    return path;
+    if (name != NULL)
+        return (name + 1);
+    else
+        return path;
 }
 
 void MOONRAKER::get_progress(void) {
@@ -169,6 +171,70 @@ void MOONRAKER::get_progress(void) {
 #endif
     } else {
         Serial.println("Empty: moonraker: get_progress");
+    }
+}
+
+void MOONRAKER::get_time_estimated(void) {
+    String meta = send_request("GET", "/server/files/metadata?filename=" + data.filename);
+    if (!meta.isEmpty()) {
+        DynamicJsonDocument json_parse(meta.length() * 2);
+        deserializeJson(json_parse, meta);
+        data.time_estimated = int16_t(json_parse["result"]["estimated_time"].as<double>() + 0.5f);
+
+#ifdef MOONRAKER_DEBUG
+        Serial.print("time_estimated: ");
+        Serial.println(data.time_estimated);
+#endif
+    } else {
+        Serial.println("Empty: moonraker: get_time_left: metadata");
+    }
+}
+
+void MOONRAKER::get_time_left(void) {
+    String stats = send_request("GET", "/printer/objects/query?print_stats");
+    if (!stats.isEmpty()) {
+        DynamicJsonDocument json_parse(stats.length() * 2);
+        deserializeJson(json_parse, stats);
+        data.filename = json_parse["result"]["status"]["print_stats"]["filename"].as<String>();
+        int16_t duration = int16_t(json_parse["result"]["status"]["print_stats"]["print_duration"].as<double>() + 0.5f);
+
+        if (data.time_estimated < 0.5f && !data.filename.isEmpty())  // check if
+        {
+            get_time_estimated();
+        }
+
+        // total
+        int16_t seconds = data.time_estimated - duration;
+        int16_t minutes = seconds / 60;
+        int16_t hours = minutes / 60;
+        int16_t days = hours / 24;
+        // current
+        seconds %= 60;
+        minutes = (minutes % 60) + (seconds > 0 ? 1 : 0);
+        hours = hours % 24;
+
+        if (days > 0) {
+            snprintf(data.time_left, sizeof(data.time_left),
+                     "%01u:%02u:%02u\0",  // => d:hh:mm
+                     days, hours, minutes);
+        } else {
+            snprintf(data.time_left, sizeof(data.time_left),
+                     "%02u:%02u\0",  // => hh:mm
+                     hours, minutes);
+        }
+
+#ifdef MOONRAKER_DEBUG
+        Serial.print("filename: ");
+        Serial.println(data.filename);
+        Serial.print("duration: ");
+        Serial.println(duration);
+        Serial.print("time_left: ");
+        Serial.println(data.time_left);
+        Serial.printf("time_left_f: %01u:%02u:%02u\n",
+                      days, hours, minutes);
+#endif
+    } else {
+        Serial.println("Empty: moonraker: get_time_left: print_stats");
     }
 }
 
@@ -210,6 +276,7 @@ void MOONRAKER::http_get_loop(void) {
         get_printer_info();
         if (data.printing) {
             get_progress();
+            get_time_left();
         }
     }
     data_unlock = true;
@@ -217,23 +284,22 @@ void MOONRAKER::http_get_loop(void) {
 
 MOONRAKER moonraker;
 
-void moonraker_post_task(void * parameter) {
-    for(;;) {
+void moonraker_post_task(void* parameter) {
+    for (;;) {
         moonraker.http_post_loop();
         delay(500);
     }
 }
 
-void moonraker_task(void * parameter) {
-
+void moonraker_task(void* parameter) {
     xTaskCreate(moonraker_post_task, "moonraker post",
-        4096,  // Stack size (bytes)
-        NULL,  // Parameter to pass
-        8,     // Task priority
-        NULL   // Task handle
-        );
+                4096,  // Stack size (bytes)
+                NULL,  // Parameter to pass
+                8,     // Task priority
+                NULL   // Task handle
+    );
 
-    for(;;) {
+    for (;;) {
         if (wifi_get_connect_status() == WIFI_STATUS_CONNECTED) {
             moonraker.http_get_loop();
         }
