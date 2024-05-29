@@ -240,12 +240,12 @@ void lv_loop_moonraker_change_screen_value(void) {
         snprintf(string_buffer, sizeof(string_buffer), "%d%%", progress);
         lv_label_set_text(ui_label_printing_progress, string_buffer);
     }
-#ifdef LIS2DW_SUPPORT
-    // accelerometer
-    lv_slider_set_value(ui_slider_printing_acc_x, abs(lis2dw12_acc[0]) / 10, LV_ANIM_ON);
-    lv_slider_set_value(ui_slider_printing_acc_y, abs(lis2dw12_acc[1]) / 10, LV_ANIM_ON);
-    lv_slider_set_value(ui_slider_printing_acc_z, abs(lis2dw12_acc[2] + 980) / 10, LV_ANIM_ON); // +980 for counteract the value of gravitational acceleration
-#endif
+    // time left
+    static char time_left[8];
+    if (strcmp(time_left, moonraker.data.time_left) != 0) {
+        strcpy(time_left, moonraker.data.time_left);
+        lv_label_set_text(ui_label_time_left, time_left);
+    }
 
     if ((moonraker.data.nozzle_target != 0) && (lv_scr_act() == ui_ScreenHeatingNozzle)) {
         lv_slider_set_value(ui_slider_heating_nozzle, moonraker.data.nozzle_actual * 100 / moonraker.data.nozzle_target, LV_ANIM_ON);
