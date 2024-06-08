@@ -245,6 +245,7 @@ void lv_loop_moonraker_change_screen_value(void) {
     if (strcmp(time_left, moonraker.data.time_left) != 0) {
         strcpy(time_left, moonraker.data.time_left);
         lv_label_set_text(ui_label_time_left, time_left);
+        lv_obj_set_style_text_color(ui_label_time_left, lv_color_hex(moonraker.data.time_left_color_hex), LV_PART_MAIN | LV_STATE_DEFAULT);
     }
 
     if ((moonraker.data.nozzle_target != 0) && (lv_scr_act() == ui_ScreenHeatingNozzle)) {

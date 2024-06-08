@@ -52,6 +52,7 @@ void ui_ScreenPrinting_screen_init(void)
     lv_obj_set_align(ui_label_time_left, LV_ALIGN_CENTER);
     lv_label_set_text(ui_label_time_left, "--:--");  // d:hh:mm
     lv_obj_set_style_text_font(ui_label_time_left, &ui_font_InterSeimiBold32, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_label_time_left, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_arc_bg_1 = lv_arc_create(ui_ScreenPrinting);
     lv_obj_set_width(ui_arc_bg_1, 240);

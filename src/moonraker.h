@@ -21,9 +21,10 @@ typedef struct {
     uint8_t progress;
     char file_path[32];
 
-    String filename;         // *.gcode
-    int16_t time_estimated;  // gcode estimation in seconds
-    char time_left[8];       // d:hh:mm
+    String filename;              // *.gcode
+    int32_t time_estimated;       // gcode estimation in seconds
+    char time_left[8];            // d:hh:mm
+    int32_t time_left_color_hex;  // time_left label color
 
     bool pause;
     bool printing;  // is klipper in a printing task (including printing, pausing, paused, cancelling)

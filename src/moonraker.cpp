@@ -179,7 +179,7 @@ void MOONRAKER::get_time_estimated(void) {
     if (!meta.isEmpty()) {
         DynamicJsonDocument json_parse(meta.length() * 2);
         deserializeJson(json_parse, meta);
-        data.time_estimated = int16_t(json_parse["result"]["estimated_time"].as<double>() + 0.5f);
+        data.time_estimated = int32_t(json_parse["result"]["estimated_time"].as<double>() + 0.01f);
 
 #ifdef MOONRAKER_DEBUG
         Serial.print("time_estimated: ");
@@ -196,16 +196,24 @@ void MOONRAKER::get_time_left(void) {
         DynamicJsonDocument json_parse(stats.length() * 2);
         deserializeJson(json_parse, stats);
         data.filename = json_parse["result"]["status"]["print_stats"]["filename"].as<String>();
-        int16_t duration = int16_t(json_parse["result"]["status"]["print_stats"]["print_duration"].as<double>() + 0.5f);
+        int32_t duration = int32_t(json_parse["result"]["status"]["print_stats"]["print_duration"].as<double>() + 0.01f);
 
-        if (data.time_estimated < 0.5f && !data.filename.isEmpty())  // check if
+        if (data.time_estimated < 0.1f && !data.filename.isEmpty())  // check if
         {
             get_time_estimated();
         }
 
         // total
-        int16_t seconds = data.time_estimated - duration;
-        int16_t minutes = seconds / 60;
+        int32_t seconds = data.time_estimated - duration;
+
+        if (seconds < 0) {  // dark red text for overtime
+            seconds = -seconds;
+            data.time_left_color_hex = LV_32BIT_BTT_DARK_RED;
+        } else {
+            data.time_left_color_hex = LV_32BIT_WHITE;
+        }
+
+        int32_t minutes = seconds / 60;
         int16_t hours = minutes / 60;
         int16_t days = hours / 24;
         // current
