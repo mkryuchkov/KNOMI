@@ -219,6 +219,7 @@ void MOONRAKER::get_time_left(void) {
         // current
         seconds %= 60;
         minutes = (minutes % 60) + (seconds > 0 ? 1 : 0);
+        minutes = minutes > 59 ? 59 : minutes;
         hours = hours % 24;
 
         if (days > 0) {
